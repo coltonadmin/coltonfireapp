@@ -883,12 +883,7 @@
     <div class="select-wrap">
       <select id="memberSelect" onchange="onMemberSelect()">
         <option value="">Select your name…</option>
-        <option value="john_chief">Chief John Harmon</option>
-        <option value="sarah_lt">Lt. Sarah Mitchell</option>
-        <option value="mike_ff">FF Mike Torres</option>
-        <option value="alex_ff">FF Alex Chen</option>
-        <option value="jen_ems">EMT Jennifer Wolfe</option>
-        <option value="dkota_admin">Dkota (Admin)</option>
+        <option value="dkota_admin">Dkota Wright (Admin)</option>
       </select>
       <span class="select-arrow">▾</span>
     </div>
@@ -1341,6 +1336,7 @@
           <button class="admin-tab" onclick="switchAdminTab('apparatus',this)">🚒 Apparatus</button>
           <button class="admin-tab" onclick="switchAdminTab('announce',this)">📢 Announce</button>
           <button class="admin-tab" onclick="switchAdminTab('links',this)">🔗 Links</button>
+          <button class="admin-tab" onclick="switchAdminTab('access',this)">🔑 Access</button>
           <button class="admin-tab" onclick="switchAdminTab('firebase',this)">🔥 Firebase</button>
         </div>
 
@@ -1428,6 +1424,47 @@
           <button class="btn-sm primary" style="max-width:200px;" onclick="showToast('Link management coming soon','info')">+ Add Link</button>
         </div>
 
+        <!-- App Access -->
+        <div class="admin-section" id="admin-access">
+          <div class="settings-section" style="margin-bottom:16px;">
+            <div class="settings-title">Grant App Access</div>
+            <div class="settings-sub">Add a member to the login screen. They'll use their name and the PIN you set.</div>
+            <div class="form-grid-2">
+              <div class="field"><label>Full Name</label><input type="text" id="acc_name" placeholder="e.g. FF John Smith"></div>
+              <div class="field">
+                <label>Rank</label>
+                <select id="acc_rank">
+                  <option value="">Select rank…</option>
+                  <option>Chief</option>
+                  <option>Deputy Chief</option>
+                  <option>Captain</option>
+                  <option>Lieutenant</option>
+                  <option>Firefighter</option>
+                  <option>EMT</option>
+                  <option>Probationary FF</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="field">
+                <label>Role</label>
+                <select id="acc_role">
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div class="field"><label>Starting PIN</label><input type="password" id="acc_pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
+            </div>
+            <button class="btn-sm primary" style="max-width:200px;" onclick="addAppMember()">🔑 Grant Access</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Rank</th><th>Role</th><th>Actions</th></tr></thead>
+              <tbody id="accessMembersTable"><tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Firebase Setup -->
         <div class="admin-section" id="admin-firebase">
           <div class="settings-section">
@@ -1491,18 +1528,12 @@ service cloud.firestore {
 <script>
 // ── DATA ──────────────────────────────────────────────────────────
 const MEMBERS = {
-  'john_chief': { name: 'Chief John Harmon', role: 'member', initial: 'J' },
-  'sarah_lt':   { name: 'Lt. Sarah Mitchell', role: 'member', initial: 'S' },
-  'mike_ff':    { name: 'FF Mike Torres', role: 'member', initial: 'M' },
-  'alex_ff':    { name: 'FF Alex Chen', role: 'member', initial: 'A' },
-  'jen_ems':    { name: 'EMT Jennifer Wolfe', role: 'member', initial: 'J' },
-  'dkota_admin':{ name: 'Dkota', role: 'admin', initial: 'D' }
+  'dkota_admin': { name: 'Dkota Wright', role: 'admin', initial: 'D' }
 };
 
 // Default PINs — overridden by localStorage if user has changed theirs
 const DEFAULT_PINS = {
-  'john_chief': '1234', 'sarah_lt': '1234', 'mike_ff': '1234',
-  'alex_ff': '1234', 'jen_ems': '1234', 'dkota_admin': '0508'
+  'dkota_admin': '0508'
 };
 function getPin(uid) { return localStorage.getItem('cvfd_pin_' + uid) || DEFAULT_PINS[uid]; }
 function setPin(uid, pin) { localStorage.setItem('cvfd_pin_' + uid, pin); }
@@ -1752,6 +1783,7 @@ function switchAdminTab(tab, btn) {
   document.getElementById('admin-' + tab).classList.add('active');
   if (tab === 'firebase') renderFirebaseStatus();
   if (tab === 'members') loadRoster();
+  if (tab === 'access') loadAppMembers();
   if (btn) {
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
@@ -1968,16 +2000,102 @@ function initFirebase() {
 }
 initFirebase();
 loadRoster();
-
-// ── SESSION RESTORE ───────────────────────────────────────────────
-(function restoreSession() {
+loadAppMembers().then(() => {
   const saved = localStorage.getItem('cvfd_session');
   if (saved && MEMBERS[saved]) {
     const auth = document.getElementById('auth-screen');
     if (auth) { auth.style.opacity = '0'; auth.style.transition = 'none'; }
     enterApp(saved);
   }
-})();
+});
+
+// ── APP ACCESS (LOGIN MEMBERS) ────────────────────────────────────
+function loadAppMembers() {
+  return new Promise(resolve => {
+    if (!firebaseReady) { resolve(); return; }
+    db.collection('appMembers').orderBy('name').get().then(snap => {
+      const sel = document.getElementById('memberSelect');
+      // Remove all options except placeholder and dkota_admin
+      Array.from(sel.options).forEach(opt => {
+        if (opt.value !== '' && opt.value !== 'dkota_admin') opt.remove();
+      });
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        const uid = doc.id;
+        MEMBERS[uid] = { name: d.name, role: d.role || 'member', initial: d.name[0].toUpperCase() };
+        DEFAULT_PINS[uid] = d.defaultPin || '1234';
+        const opt = document.createElement('option');
+        opt.value = uid;
+        opt.textContent = d.name + (d.rank ? ' · ' + d.rank : '');
+        sel.appendChild(opt);
+      });
+      renderAccessTable(snap.docs);
+      resolve();
+    }).catch(err => { console.error('[CVFD] loadAppMembers failed:', err); resolve(); });
+  });
+}
+
+function renderAccessTable(docs) {
+  const tbody = document.getElementById('accessMembersTable');
+  if (!tbody) return;
+  if (!docs || docs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">No members yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = docs.map(doc => {
+    const d = doc.data();
+    return `<tr>
+      <td><strong>${d.name}</strong></td>
+      <td>${d.rank || '—'}</td>
+      <td><span class="badge ${d.role === 'admin' ? 'red' : 'blue'}">${d.role === 'admin' ? 'Admin' : 'Member'}</span></td>
+      <td><button class="action-btn deny" onclick="removeAppMember('${doc.id}','${d.name}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function addAppMember() {
+  if (!firebaseReady) { showToast('Firebase not connected.','error'); return; }
+  const name = document.getElementById('acc_name').value.trim();
+  const rank = document.getElementById('acc_rank').value;
+  const role = document.getElementById('acc_role').value;
+  const pin  = document.getElementById('acc_pin').value.trim();
+  if (!name) { showToast('Name is required','error'); return; }
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { showToast('PIN must be exactly 4 digits','error'); return; }
+  const btn = document.querySelector('#admin-access .btn-sm.primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  db.collection('appMembers').add({
+    name, rank: rank || '', role: role || 'member',
+    defaultPin: pin,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    showToast(`${name} can now log in!`, 'success');
+    document.getElementById('acc_name').value = '';
+    document.getElementById('acc_rank').value = '';
+    document.getElementById('acc_role').value = 'member';
+    document.getElementById('acc_pin').value = '';
+    if (btn) { btn.disabled = false; btn.textContent = '🔑 Grant Access'; }
+    loadAppMembers();
+  }).catch(err => {
+    console.error(err);
+    showToast('Failed to add member.','error');
+    if (btn) { btn.disabled = false; btn.textContent = '🔑 Grant Access'; }
+  });
+}
+
+function removeAppMember(id, name) {
+  if (!confirm(`Remove ${name}'s app access? They will no longer be able to log in.`)) return;
+  db.collection('appMembers').doc(id).delete().then(() => {
+    // Remove from MEMBERS and dropdown
+    delete MEMBERS[id];
+    delete DEFAULT_PINS[id];
+    const sel = document.getElementById('memberSelect');
+    const opt = sel.querySelector(`option[value="${id}"]`);
+    if (opt) opt.remove();
+    showToast(`${name} access removed`, 'info');
+    loadAppMembers();
+  }).catch(err => { console.error(err); showToast('Failed to remove.','error'); });
+}
+
 
 function renderFirebaseStatus() {
   const row = document.getElementById('fb-config-status-row');
