@@ -1095,14 +1095,17 @@
                 <label class="checkbox-label"><input type="checkbox" value="Utility 416"> Utility 416</label>
               </div>
             </div>
-            <div class="form-grid-2">
-              <div class="field"><label>Personnel on Scene</label><input type="number" id="cl_personnel" min="1" max="99" placeholder="0"></div>
-              <div class="field">
-                <label>Mutual Aid</label>
-                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;">
-                  <span style="font-size:13px;color:var(--text-secondary);">Mutual aid requested/provided?</span>
-                  <label class="toggle"><input type="checkbox" id="cl_mutual_aid"><span class="toggle-slider"></span></label>
-                </div>
+            <div class="field">
+              <label>Personnel on Scene</label>
+              <div class="checkbox-group" id="cl_personnel_group">
+                <div style="color:var(--text-tertiary);font-size:13px;padding:8px 0;">Loading roster…</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Mutual Aid</label>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 0;">
+                <span style="font-size:13px;color:var(--text-secondary);">Mutual aid requested/provided?</span>
+                <label class="toggle"><input type="checkbox" id="cl_mutual_aid"><span class="toggle-slider"></span></label>
               </div>
             </div>
             <div class="field"><label>Outcome / Notes</label><textarea id="cl_notes" placeholder="Describe the outcome, actions taken, any notable events…"></textarea></div>
@@ -1349,17 +1352,32 @@
 
         <!-- Members -->
         <div class="admin-section" id="admin-members">
+          <div class="settings-section" style="margin-bottom:16px;">
+            <div class="settings-title">Add Member to Roster</div>
+            <div class="settings-sub">Added members appear in the Call Log personnel selector.</div>
+            <div class="form-grid-2">
+              <div class="field"><label>Full Name</label><input type="text" id="new_member_name" placeholder="e.g. FF John Smith"></div>
+              <div class="field">
+                <label>Rank</label>
+                <select id="new_member_rank">
+                  <option value="">Select rank…</option>
+                  <option>Chief</option>
+                  <option>Deputy Chief</option>
+                  <option>Captain</option>
+                  <option>Lieutenant</option>
+                  <option>Firefighter</option>
+                  <option>EMT</option>
+                  <option>Probationary FF</option>
+                  <option>Admin</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn-sm primary" style="max-width:180px;" onclick="addRosterMember()">+ Add Member</button>
+          </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Name</th><th>Rank</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
-              <tbody>
-                <tr><td><strong>Dkota</strong></td><td>Admin</td><td><span class="badge red">Admin</span></td><td><div style="display:flex;align-items:center;gap:6px;"><div class="dot green"></div>Active</div></td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">Today</span></td><td><button class="action-btn edit">Edit</button></td></tr>
-                <tr><td><strong>Chief John Harmon</strong></td><td>Chief</td><td><span class="badge blue">Member</span></td><td><div style="display:flex;align-items:center;gap:6px;"><div class="dot green"></div>Active</div></td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">02/17/26</span></td><td><button class="action-btn edit">Edit</button></td></tr>
-                <tr><td><strong>Lt. Sarah Mitchell</strong></td><td>Lieutenant</td><td><span class="badge blue">Member</span></td><td><div style="display:flex;align-items:center;gap:6px;"><div class="dot green"></div>Active</div></td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">02/16/26</span></td><td><button class="action-btn edit">Edit</button></td></tr>
-                <tr><td><strong>FF Mike Torres</strong></td><td>Firefighter</td><td><span class="badge blue">Member</span></td><td><div style="display:flex;align-items:center;gap:6px;"><div class="dot amber"></div>Away</div></td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">02/14/26</span></td><td><button class="action-btn edit">Edit</button></td></tr>
-                <tr><td><strong>FF Alex Chen</strong></td><td>Firefighter</td><td><span class="badge blue">Member</span></td><td><div style="display:flex;align-items:center;gap:6px;"><div class="dot red"></div>Inactive</div></td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">02/10/26</span></td><td><button class="action-btn edit">Edit</button></td></tr>
-                <tr><td><strong>EMT Jennifer Wolfe</strong></td><td>EMT</td><td><span class="badge blue">Member</span></td><td><div style="display:flex;align-items:center;gap:6px;"><div class="dot green"></div>Active</div></td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">Today</span></td><td><button class="action-btn edit">Edit</button></td></tr>
-              </tbody>
+              <thead><tr><th>Name</th><th>Rank</th><th>Added</th><th>Actions</th></tr></thead>
+              <tbody id="rosterAdminTable"><tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">Loading roster…</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -1725,6 +1743,7 @@ function switchAdminTab(tab, btn) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
   if (tab === 'firebase') renderFirebaseStatus();
+  if (tab === 'members') loadRoster();
   if (btn) {
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
@@ -1941,6 +1960,7 @@ function initFirebase() {
   }
 }
 initFirebase();
+loadRoster();
 
 function renderFirebaseStatus() {
   const row = document.getElementById('fb-config-status-row');
@@ -2012,6 +2032,7 @@ function initCallLogForm() {
   const sub = document.getElementById('cl_submitted_by');
   if (sub && currentUser) sub.value = currentUser.name;
   initCheckboxGroup('cl_units_group');
+  renderPersonnelSelector();
   updateFormState('cl-config-notice','cl-form-wrap');
 }
 
@@ -2022,6 +2043,7 @@ function submitCallLog() {
   const addr = document.getElementById('cl_address').value.trim();
   if (!dt || !type || !addr) { showToast('Date/Time, Incident Type, and Address are required','error'); return; }
   const units = getCheckedValues('cl_units_group');
+  const personnel = getCheckedValues('cl_personnel_group');
   const uid = currentUser ? Object.keys(MEMBERS).find(k => MEMBERS[k] === currentUser) || 'unknown' : 'unknown';
   const btn = document.querySelector('#cl-form-wrap .btn-sm.primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
@@ -2031,7 +2053,7 @@ function submitCallLog() {
     address:          addr,
     dateTime:         firebase.firestore.Timestamp.fromDate(new Date(dt)),
     unitsResponding:  units,
-    personnelOnScene: parseInt(document.getElementById('cl_personnel').value) || 0,
+    personnelOnScene: personnel,
     mutualAid:        document.getElementById('cl_mutual_aid').checked,
     notes:            document.getElementById('cl_notes').value.trim(),
     submittedBy:      currentUser ? currentUser.name : 'Unknown',
@@ -2053,6 +2075,7 @@ function resetCallLogForm() {
   document.getElementById('cl_type').value = '';
   document.getElementById('cl_mutual_aid').checked = false;
   resetCheckboxGroup('cl_units_group');
+  resetCheckboxGroup('cl_personnel_group');
   document.getElementById('cl_datetime').value = nowDatetime();
 }
 
@@ -2076,7 +2099,7 @@ function loadCallLogHistory() {
         </div>
         <div class="submission-card-row"><span class="submission-card-label">Location</span><span class="submission-card-value">${d.address||'—'}</span></div>
         <div class="submission-card-row"><span class="submission-card-label">Units</span><span class="submission-card-value">${d.unitsResponding?.join(', ')||'—'}</span></div>
-        <div class="submission-card-row"><span class="submission-card-label">Personnel</span><span class="submission-card-value">${d.personnelOnScene??'—'}</span></div>
+        <div class="submission-card-row"><span class="submission-card-label">Personnel</span><span class="submission-card-value">${Array.isArray(d.personnelOnScene)?d.personnelOnScene.join(', ')||'—':d.personnelOnScene??'—'}</span></div>
         <div class="submission-card-row"><span class="submission-card-label">Mutual Aid</span><span class="submission-card-value" style="color:${d.mutualAid?'var(--amber)':'inherit'}">${d.mutualAid?'Yes':'No'}</span></div>
         ${d.notes?`<div class="submission-card-row" style="flex-direction:column;gap:3px;"><span class="submission-card-label">Notes</span><span class="submission-card-value" style="line-height:1.5;opacity:0.85;">${d.notes}</span></div>`:''}
         <div class="submission-card-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--glass-border);"><span class="submission-card-label">Submitted by</span><span class="submission-card-value" style="color:var(--text-secondary);">${d.submittedBy||'—'}</span></div>
@@ -2234,6 +2257,84 @@ function loadTruckHistory() {
       </div>`;
     }).join('');
   }).catch(err => { console.error(err); list.innerHTML = '<div class="submissions-loading">Failed to load.</div>'; });
+}
+
+// ── ROSTER ───────────────────────────────────────────────────────
+let rosterCache = []; // { id, name, rank }
+
+function loadRoster() {
+  if (!firebaseReady) return;
+  db.collection('roster').orderBy('name').get().then(snap => {
+    rosterCache = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderPersonnelSelector();
+    renderRosterAdmin();
+  }).catch(err => console.error('[CVFD] Roster load failed:', err));
+}
+
+function renderPersonnelSelector() {
+  const group = document.getElementById('cl_personnel_group');
+  if (!group) return;
+  if (rosterCache.length === 0) {
+    group.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:8px 0;">No members in roster yet. Add members in Admin → Members.</div>';
+    return;
+  }
+  group.innerHTML = rosterCache.map(m =>
+    `<label class="checkbox-label"><input type="checkbox" value="${m.name}"> ${m.name}${m.rank ? ' · <span style="opacity:0.6;font-size:12px;">'+m.rank+'</span>' : ''}</label>`
+  ).join('');
+  initCheckboxGroup('cl_personnel_group');
+}
+
+function renderRosterAdmin() {
+  const tbody = document.getElementById('rosterAdminTable');
+  if (!tbody) return;
+  if (rosterCache.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">No members yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rosterCache.map(m => `
+    <tr>
+      <td><strong>${m.name}</strong></td>
+      <td>${m.rank || '—'}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${m.addedAt ? new Date(m.addedAt.toDate()).toLocaleDateString('en-US') : '—'}</span></td>
+      <td><button class="action-btn deny" onclick="removeRosterMember('${m.id}','${m.name}')">Remove</button></td>
+    </tr>`).join('');
+}
+
+function addRosterMember() {
+  if (!firebaseReady) { showToast('Firebase not connected.','error'); return; }
+  const name = document.getElementById('new_member_name').value.trim();
+  const rank = document.getElementById('new_member_rank').value;
+  if (!name) { showToast('Please enter a name','error'); return; }
+  const btn = document.querySelector('#admin-members .btn-sm.primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  db.collection('roster').add({
+    name, rank: rank || '',
+    addedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(docRef => {
+    rosterCache.push({ id: docRef.id, name, rank: rank || '', addedAt: null });
+    rosterCache.sort((a,b) => a.name.localeCompare(b.name));
+    renderRosterAdmin();
+    renderPersonnelSelector();
+    document.getElementById('new_member_name').value = '';
+    document.getElementById('new_member_rank').value = '';
+    showToast(`${name} added to roster!`, 'success');
+    if (btn) { btn.disabled = false; btn.textContent = '+ Add Member'; }
+  }).catch(err => {
+    console.error(err);
+    showToast('Failed to add member.','error');
+    if (btn) { btn.disabled = false; btn.textContent = '+ Add Member'; }
+  });
+}
+
+function removeRosterMember(id, name) {
+  if (!firebaseReady) return;
+  if (!confirm(`Remove ${name} from roster?`)) return;
+  db.collection('roster').doc(id).delete().then(() => {
+    rosterCache = rosterCache.filter(m => m.id !== id);
+    renderRosterAdmin();
+    renderPersonnelSelector();
+    showToast(`${name} removed from roster`, 'info');
+  }).catch(err => { console.error(err); showToast('Failed to remove.','error'); });
 }
 
 // ── KEYBOARD PIN INPUT ────────────────────────────────────────────
