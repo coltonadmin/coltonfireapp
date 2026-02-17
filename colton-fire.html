@@ -855,6 +855,11 @@
     <div class="auth-title">Colton Volunteer Fire</div>
     <div class="auth-sub">Member Portal · Secure Access</div>
 
+    <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:20px;">
+      <div class="dot green"></div>
+      <span style="font-size:12px;color:var(--text-secondary);">System Online</span>
+    </div>
+
     <div class="select-wrap">
       <select id="memberSelect" onchange="onMemberSelect()">
         <option value="">Select your name…</option>
@@ -869,30 +874,13 @@
     </div>
 
     <div id="pin-section">
-      <div style="text-align:center;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Enter your PIN</div>
-      <div class="pin-display" id="pinDisplay">
-        <div class="pin-dot-display" id="pd0"></div>
-        <div class="pin-dot-display" id="pd1"></div>
-        <div class="pin-dot-display" id="pd2"></div>
-        <div class="pin-dot-display" id="pd3"></div>
-      </div>
-      <div class="pin-grid">
-        <button class="pin-btn" onclick="pinInput('1')">1</button>
-        <button class="pin-btn" onclick="pinInput('2')">2</button>
-        <button class="pin-btn" onclick="pinInput('3')">3</button>
-        <button class="pin-btn" onclick="pinInput('4')">4</button>
-        <button class="pin-btn" onclick="pinInput('5')">5</button>
-        <button class="pin-btn" onclick="pinInput('6')">6</button>
-        <button class="pin-btn" onclick="pinInput('7')">7</button>
-        <button class="pin-btn" onclick="pinInput('8')">8</button>
-        <button class="pin-btn" onclick="pinInput('9')">9</button>
-        <button class="pin-btn empty"></button>
-        <button class="pin-btn" onclick="pinInput('0')">0</button>
-        <button class="pin-btn del" onclick="pinDelete()">⌫</button>
-      </div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500;">Enter your PIN</div>
+      <input type="password" id="pinTextInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••" autocomplete="off"
+        style="width:100%;padding:14px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:'JetBrains Mono',monospace;font-size:22px;letter-spacing:8px;text-align:center;outline:none;transition:border-color 0.2s;"
+        oninput="onPinTextInput(this)" onkeydown="if(event.key==='Enter')checkPin()">
     </div>
 
-    <button class="btn-ghost" onclick="openModal('requestModal')">Not a member? Request Access</button>
+    <button class="btn-ghost" onclick="openModal('requestModal')" style="margin-top:8px;">Not a member? Request Access</button>
   </div>
 </div>
 
@@ -1531,33 +1519,29 @@ function onMemberSelect() {
   const val = document.getElementById('memberSelect').value;
   const pinSec = document.getElementById('pin-section');
   currentPin = '';
-  updatePinDisplay();
+  const inp = document.getElementById('pinTextInput');
+  if (inp) inp.value = '';
   if (val) {
     pinSec.classList.add('visible');
+    setTimeout(() => { if (inp) inp.focus(); }, 50);
   } else {
     pinSec.classList.remove('visible');
   }
 }
 
-function pinInput(digit) {
-  if (currentPin.length >= 4) return;
-  currentPin += digit;
-  updatePinDisplay();
+function onPinTextInput(input) {
+  // Only allow digits
+  input.value = input.value.replace(/\D/g,'');
+  currentPin = input.value;
   if (currentPin.length === 4) {
     setTimeout(checkPin, 120);
   }
 }
 
-function pinDelete() {
-  currentPin = currentPin.slice(0, -1);
-  updatePinDisplay();
-}
-
 function updatePinDisplay() {
-  for (let i = 0; i < 4; i++) {
-    const d = document.getElementById('pd' + i);
-    d.classList.toggle('filled', i < currentPin.length);
-  }
+  const input = document.getElementById('pinTextInput');
+  if (input) input.value = '';
+  currentPin = '';
 }
 
 function checkPin() {
@@ -1572,7 +1556,8 @@ function checkPin() {
     setTimeout(() => {
       document.getElementById('authCard').classList.remove('shake');
       currentPin = '';
-      updatePinDisplay();
+      const inp = document.getElementById('pinTextInput');
+      if (inp) { inp.value = ''; inp.focus(); }
     }, 450);
   }
 }
@@ -1614,7 +1599,8 @@ function logout() {
   document.getElementById('memberSelect').value = '';
   document.getElementById('pin-section').classList.remove('visible');
   currentPin = '';
-  updatePinDisplay();
+  const inp = document.getElementById('pinTextInput');
+  if (inp) inp.value = '';
   document.getElementById('authCard').classList.remove('success');
   currentUser = null;
 }
@@ -1935,7 +1921,6 @@ function createEmbers() {
 }
 createEmbers();
 
-// Keyboard PIN input
 // ── FIREBASE CONFIG & INIT ────────────────────────────────────────
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyDGPuxUvGIHO8aKnP3CxyIJVEzuDdAjJ4Q",
@@ -2337,14 +2322,8 @@ function removeRosterMember(id, name) {
   }).catch(err => { console.error(err); showToast('Failed to remove.','error'); });
 }
 
-// ── KEYBOARD PIN INPUT ────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (document.getElementById('auth-screen').style.display === 'none') return;
-  if (e.key >= '0' && e.key <= '9' && document.getElementById('pin-section').classList.contains('visible')) {
-    pinInput(e.key);
-  }
-  if (e.key === 'Backspace') pinDelete();
-});
+// ── REMOVE old inline comment leftover ───────────────────────────
+// Keyboard PIN is now handled natively by the pinTextInput element.
 </script>
 </body>
 </html>
