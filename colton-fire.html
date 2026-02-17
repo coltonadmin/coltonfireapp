@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <style>
   :root {
     --bg-deep: #080810;
@@ -889,7 +890,7 @@
     </div>
 
     <div id="pin-section">
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500;">Enter your PIN</div>
+      <div id="pin-label" style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500;">Enter your PIN</div>
       <input type="password" id="pinTextInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••" autocomplete="off"
         style="width:100%;padding:14px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:'JetBrains Mono',monospace;font-size:22px;letter-spacing:8px;text-align:center;outline:none;transition:border-color 0.2s;"
         oninput="onPinTextInput(this)" onkeydown="if(event.key==='Enter')checkPin()">
@@ -1445,6 +1446,7 @@
                 </select>
               </div>
             </div>
+            <div class="field"><label>Email Address</label><input type="email" id="acc_email" placeholder="member@email.com"></div>
             <div class="form-grid-2">
               <div class="field">
                 <label>Role</label>
@@ -1453,7 +1455,7 @@
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              <div class="field"><label>Starting PIN</label><input type="password" id="acc_pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
+              <div class="field"><label>Starting Password</label><input type="password" id="acc_pin" placeholder="Min 6 characters"></div>
             </div>
             <button class="btn-sm primary" style="max-width:200px;" onclick="addAppMember()">🔑 Grant Access</button>
           </div>
@@ -1572,6 +1574,15 @@ function onMemberSelect() {
   currentPin = '';
   const inp = document.getElementById('pinTextInput');
   if (inp) inp.value = '';
+  // Adjust input for PIN (admin) vs password (Firebase Auth members)
+  const label = document.getElementById('pin-label');
+  if (val === 'dkota_admin') {
+    if (inp) { inp.maxLength = 4; inp.inputMode = 'numeric'; inp.pattern = '[0-9]*'; inp.placeholder = '••••'; inp.style.letterSpacing = '8px'; inp.style.fontSize = '22px'; }
+    if (label) label.textContent = 'Enter your PIN';
+  } else {
+    if (inp) { inp.maxLength = 128; inp.inputMode = 'text'; inp.pattern = ''; inp.placeholder = 'Password'; inp.style.letterSpacing = '2px'; inp.style.fontSize = '18px'; }
+    if (label) label.textContent = 'Enter your password';
+  }
   if (val) {
     pinSec.classList.add('visible');
     setTimeout(() => { if (inp) inp.focus(); }, 50);
@@ -1581,11 +1592,17 @@ function onMemberSelect() {
 }
 
 function onPinTextInput(input) {
-  // Only allow digits
-  input.value = input.value.replace(/\D/g,'');
-  currentPin = input.value;
-  if (currentPin.length === 4) {
-    setTimeout(checkPin, 120);
+  const uid = document.getElementById('memberSelect').value;
+  if (uid === 'dkota_admin') {
+    // Only allow digits for PIN
+    input.value = input.value.replace(/\D/g,'');
+    currentPin = input.value;
+    if (currentPin.length === 4) {
+      setTimeout(checkPin, 120);
+    }
+  } else {
+    // Allow any characters for password
+    currentPin = input.value;
   }
 }
 
@@ -1597,19 +1614,40 @@ function updatePinDisplay() {
 
 function checkPin() {
   const uid = document.getElementById('memberSelect').value;
-  const correct = getPin(uid);
-  if (currentPin === correct) {
-    // Success
-    document.getElementById('authCard').classList.add('success');
-    setTimeout(() => enterApp(uid), 500);
+  if (!uid) { showToast('Please select your name', 'error'); return; }
+
+  if (uid === 'dkota_admin') {
+    // Admin uses PIN system
+    const correct = getPin(uid);
+    if (currentPin === correct) {
+      document.getElementById('authCard').classList.add('success');
+      setTimeout(() => enterApp(uid), 500);
+    } else {
+      document.getElementById('authCard').classList.add('shake');
+      setTimeout(() => {
+        document.getElementById('authCard').classList.remove('shake');
+        currentPin = '';
+        const inp = document.getElementById('pinTextInput');
+        if (inp) { inp.value = ''; inp.focus(); }
+      }, 450);
+    }
   } else {
-    document.getElementById('authCard').classList.add('shake');
-    setTimeout(() => {
-      document.getElementById('authCard').classList.remove('shake');
-      currentPin = '';
-      const inp = document.getElementById('pinTextInput');
-      if (inp) { inp.value = ''; inp.focus(); }
-    }, 450);
+    // Firebase Auth members use email + password
+    const member = appMembersCache.find(m => m.docId === uid);
+    if (!member || !member.email) { showToast('Member account not found', 'error'); return; }
+    const password = document.getElementById('pinTextInput').value;
+    if (!password) { showToast('Please enter your password', 'error'); return; }
+    if (!auth) { showToast('Authentication not available', 'error'); return; }
+    auth.signInWithEmailAndPassword(member.email, password)
+      .catch(err => {
+        showToast('Incorrect password', 'error');
+        currentPin = '';
+        const inp = document.getElementById('pinTextInput');
+        if (inp) { inp.value = ''; inp.focus(); }
+        document.getElementById('authCard').classList.add('shake');
+        setTimeout(() => document.getElementById('authCard').classList.remove('shake'), 450);
+      });
+    // Success is handled by onAuthStateChanged in initFirebase()
   }
 }
 
@@ -1638,21 +1676,28 @@ function enterApp(uid) {
     document.getElementById('app').classList.add('visible');
     initDashboard();
     startClock();
-    localStorage.setItem('cvfd_session', uid);
+    // Only persist session via localStorage for PIN-based admin
+    if (uid === 'dkota_admin') localStorage.setItem('cvfd_session', uid);
   }, 500);
 }
 
 function logout() {
+  // Sign out Firebase Auth session for non-admin users
+  if (auth && currentUser && currentUser.role !== 'admin') {
+    auth.signOut().catch(e => console.warn('[CVFD] signOut error:', e));
+  }
   document.getElementById('app').classList.remove('visible');
-  const auth = document.getElementById('auth-screen');
-  auth.style.display = 'flex';
-  auth.style.opacity = '0';
-  setTimeout(() => { auth.style.transition = 'opacity 0.4s'; auth.style.opacity = '1'; }, 10);
+  const authScreen = document.getElementById('auth-screen');
+  authScreen.style.display = 'flex';
+  authScreen.style.opacity = '0';
+  setTimeout(() => { authScreen.style.transition = 'opacity 0.4s'; authScreen.style.opacity = '1'; }, 10);
   document.getElementById('memberSelect').value = '';
   document.getElementById('pin-section').classList.remove('visible');
   currentPin = '';
   const inp = document.getElementById('pinTextInput');
-  if (inp) inp.value = '';
+  if (inp) { inp.value = ''; inp.maxLength = 4; inp.inputMode = 'numeric'; inp.placeholder = '••••'; inp.style.letterSpacing = '8px'; inp.style.fontSize = '22px'; }
+  const label = document.getElementById('pin-label');
+  if (label) label.textContent = 'Enter your PIN';
   document.getElementById('authCard').classList.remove('success');
   currentUser = null;
   localStorage.removeItem('cvfd_session');
@@ -1986,50 +2031,66 @@ const FIREBASE_CONFIG = {
 };
 
 let db = null;
+let auth = null;
 let firebaseReady = false;
 
 function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
+    db   = firebase.firestore();
+    auth = firebase.auth();
     firebaseReady = true;
     console.log('[CVFD] Firebase connected');
+
+    // Firebase Auth session persistence — auto-restores login after refresh
+    auth.onAuthStateChanged(user => {
+      if (user && !currentUser) {
+        // Find member by Firebase Auth UID in our cache
+        const match = appMembersCache.find(m => m.authUid === user.uid);
+        if (match && MEMBERS[match.docId]) {
+          enterApp(match.docId);
+        }
+        // If cache not yet loaded (timing race), loadAppMembers() will handle it
+      }
+    });
   } catch(e) {
     console.error('[CVFD] Firebase init failed:', e);
   }
 }
 initFirebase();
 loadRoster();
-loadAppMembers().then(() => {
-  const saved = localStorage.getItem('cvfd_session');
-  if (saved && MEMBERS[saved]) {
-    const auth = document.getElementById('auth-screen');
-    if (auth) { auth.style.opacity = '0'; auth.style.transition = 'none'; }
-    enterApp(saved);
-  }
-});
+loadAppMembers(); // populates dropdown; auth.onAuthStateChanged handles session restore
 
 // ── APP ACCESS (LOGIN MEMBERS) ────────────────────────────────────
+let appMembersCache = []; // { docId, name, rank, role, email, authUid }
+
 function loadAppMembers() {
   return new Promise(resolve => {
     if (!firebaseReady) { resolve(); return; }
     db.collection('appMembers').orderBy('name').get().then(snap => {
+      appMembersCache = [];
       const sel = document.getElementById('memberSelect');
-      // Remove all options except placeholder and dkota_admin
       Array.from(sel.options).forEach(opt => {
         if (opt.value !== '' && opt.value !== 'dkota_admin') opt.remove();
       });
       snap.docs.forEach(doc => {
         const d = doc.data();
-        const uid = doc.id;
-        MEMBERS[uid] = { name: d.name, role: d.role || 'member', initial: d.name[0].toUpperCase() };
-        DEFAULT_PINS[uid] = d.defaultPin || '1234';
+        appMembersCache.push({ docId: doc.id, name: d.name, rank: d.rank || '', role: d.role || 'member', email: d.email || '', authUid: d.authUid || '' });
+        MEMBERS[doc.id] = { name: d.name, role: d.role || 'member', initial: d.name[0].toUpperCase() };
         const opt = document.createElement('option');
-        opt.value = uid;
+        opt.value = doc.id;
         opt.textContent = d.name + (d.rank ? ' · ' + d.rank : '');
         sel.appendChild(opt);
       });
       renderAccessTable(snap.docs);
+      // Handle timing race: if onAuthStateChanged already fired before cache was ready
+      if (auth && !currentUser) {
+        const fbUser = auth.currentUser;
+        if (fbUser) {
+          const match = appMembersCache.find(m => m.authUid === fbUser.uid);
+          if (match && MEMBERS[match.docId]) enterApp(match.docId);
+        }
+      }
       resolve();
     }).catch(err => { console.error('[CVFD] loadAppMembers failed:', err); resolve(); });
   });
@@ -2039,58 +2100,85 @@ function renderAccessTable(docs) {
   const tbody = document.getElementById('accessMembersTable');
   if (!tbody) return;
   if (!docs || docs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">No members yet. Add one above.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">No members yet. Add one above.</td></tr>';
     return;
   }
   tbody.innerHTML = docs.map(doc => {
     const d = doc.data();
+    const hasAuth = !!d.authUid;
     return `<tr>
       <td><strong>${d.name}</strong></td>
       <td>${d.rank || '—'}</td>
+      <td style="font-size:12px;color:var(--text-secondary);">${d.email || '—'}</td>
       <td><span class="badge ${d.role === 'admin' ? 'red' : 'blue'}">${d.role === 'admin' ? 'Admin' : 'Member'}</span></td>
-      <td><button class="action-btn deny" onclick="removeAppMember('${doc.id}','${d.name}')">Remove</button></td>
+      <td><button class="action-btn deny" onclick="removeAppMember('${doc.id}','${d.name}','${d.authUid||''}')">Remove</button></td>
     </tr>`;
   }).join('');
 }
 
-function addAppMember() {
+async function addAppMember() {
   if (!firebaseReady) { showToast('Firebase not connected.','error'); return; }
-  const name = document.getElementById('acc_name').value.trim();
-  const rank = document.getElementById('acc_rank').value;
-  const role = document.getElementById('acc_role').value;
-  const pin  = document.getElementById('acc_pin').value.trim();
-  if (!name) { showToast('Name is required','error'); return; }
-  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { showToast('PIN must be exactly 4 digits','error'); return; }
+  const name     = document.getElementById('acc_name').value.trim();
+  const rank     = document.getElementById('acc_rank').value;
+  const role     = document.getElementById('acc_role').value;
+  const email    = document.getElementById('acc_email').value.trim();
+  const password = document.getElementById('acc_pin').value;
+  if (!name)  { showToast('Name is required','error'); return; }
+  if (!email) { showToast('Email is required','error'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters','error'); return; }
+
   const btn = document.querySelector('#admin-access .btn-sm.primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
-  db.collection('appMembers').add({
-    name, rank: rank || '', role: role || 'member',
-    defaultPin: pin,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+
+  try {
+    // Create Firebase Auth user via REST API — does NOT sign out the current admin
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_CONFIG.apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: false }) }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const authUid = data.localId;
+
+    // Save to Firestore
+    await db.collection('appMembers').add({
+      name, rank: rank || '', role: role || 'member',
+      email, authUid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
     showToast(`${name} can now log in!`, 'success');
-    document.getElementById('acc_name').value = '';
+    ['acc_name','acc_email','acc_pin'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     document.getElementById('acc_rank').value = '';
     document.getElementById('acc_role').value = 'member';
-    document.getElementById('acc_pin').value = '';
     if (btn) { btn.disabled = false; btn.textContent = '🔑 Grant Access'; }
     loadAppMembers();
-  }).catch(err => {
+  } catch(err) {
     console.error(err);
-    showToast('Failed to add member.','error');
+    const msg = err.message.includes('EMAIL_EXISTS') ? 'That email already has an account.' : err.message;
+    showToast(msg, 'error');
     if (btn) { btn.disabled = false; btn.textContent = '🔑 Grant Access'; }
-  });
+  }
 }
 
-function removeAppMember(id, name) {
+function removeAppMember(docId, name, authUid) {
   if (!confirm(`Remove ${name}'s app access? They will no longer be able to log in.`)) return;
-  db.collection('appMembers').doc(id).delete().then(() => {
-    // Remove from MEMBERS and dropdown
-    delete MEMBERS[id];
-    delete DEFAULT_PINS[id];
+  const del = db.collection('appMembers').doc(docId).delete();
+  // Also delete Firebase Auth user via REST (best-effort)
+  if (authUid && auth) {
+    auth.currentUser?.getIdToken().then(token => {
+      fetch(`https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${FIREBASE_CONFIG.apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ localId: authUid }) }).catch(() => {});
+    }).catch(() => {});
+  }
+  del.then(() => {
+    delete MEMBERS[docId];
     const sel = document.getElementById('memberSelect');
-    const opt = sel.querySelector(`option[value="${id}"]`);
+    const opt = sel.querySelector(`option[value="${docId}"]`);
     if (opt) opt.remove();
+    appMembersCache = appMembersCache.filter(m => m.docId !== docId);
     showToast(`${name} access removed`, 'info');
     loadAppMembers();
   }).catch(err => { console.error(err); showToast('Failed to remove.','error'); });
