@@ -1270,11 +1270,13 @@ const MEMBERS = {
   'dkota_admin':{ name: 'Dkota', role: 'admin', initial: 'D' }
 };
 
-// Demo PINs (in production these would be hashed in a real DB)
-const DEMO_PINS = {
+// Default PINs — overridden by localStorage if user has changed theirs
+const DEFAULT_PINS = {
   'john_chief': '1234', 'sarah_lt': '1234', 'mike_ff': '1234',
-  'alex_ff': '1234', 'jen_ems': '1234', 'dkota_admin': '0000'
+  'alex_ff': '1234', 'jen_ems': '1234', 'dkota_admin': '0508'
 };
+function getPin(uid) { return localStorage.getItem('cvfd_pin_' + uid) || DEFAULT_PINS[uid]; }
+function setPin(uid, pin) { localStorage.setItem('cvfd_pin_' + uid, pin); }
 
 let apparatus = [
   { id: 'e411', icon: '🚒', name: 'Engine 411', type: 'Pumper Engine', year: '2018', model: 'Pierce Enforcer', status: 'in_service' },
@@ -1339,8 +1341,8 @@ function updatePinDisplay() {
 
 function checkPin() {
   const uid = document.getElementById('memberSelect').value;
-  const correct = DEMO_PINS[uid];
-  if (currentPin === correct || currentPin === '0000') {
+  const correct = getPin(uid);
+  if (currentPin === correct) {
     // Success
     document.getElementById('authCard').classList.add('success');
     setTimeout(() => enterApp(uid), 500);
@@ -1540,7 +1542,7 @@ function approveRequest(rowId, name) {
   opt.value = uid; opt.textContent = name;
   sel.appendChild(opt);
   MEMBERS[uid] = { name, role: 'member', initial: name[0] };
-  DEMO_PINS[uid] = '1234';
+  setPin(uid, '1234');
 
   showToast(`${name} approved & added to members`, 'success');
 }
@@ -1604,8 +1606,10 @@ function changePin() {
   const newP = document.getElementById('newPin').value;
   const conP = document.getElementById('confirmPin').value;
   if (!oldP || !newP || !conP) { showToast('Please fill all PIN fields', 'error'); return; }
+  if (oldP !== getPin(currentUser)) { showToast('Current PIN is incorrect', 'error'); return; }
   if (newP !== conP) { showToast('New PINs do not match', 'error'); return; }
   if (newP.length < 4) { showToast('PIN must be 4 digits', 'error'); return; }
+  setPin(currentUser, newP);
   showToast('PIN updated successfully', 'success');
   document.getElementById('oldPin').value = '';
   document.getElementById('newPin').value = '';
