@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Colton Volunteer Fire Department</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <style>
   :root {
     --bg-deep: #080810;
@@ -756,6 +758,81 @@
   .gap-8 { gap: 8px; }
   .gap-12 { gap: 12px; }
   input[type="range"] { accent-color: var(--red); width: 100%; }
+
+  /* ── FIREBASE NATIVE FORMS ── */
+  .fb-form { padding: 4px 0 20px; }
+  .fb-form .field textarea {
+    width: 100%; padding: 12px 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px; color: white;
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    outline: none; resize: vertical; min-height: 90px; line-height: 1.6;
+    transition: border-color 0.2s;
+  }
+  .fb-form .field textarea:focus { border-color: rgba(230,57,70,0.5); }
+  .fb-form .field textarea::placeholder { color: var(--text-tertiary); }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 600px) { .form-grid-2 { grid-template-columns: 1fr; } }
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .checkbox-label {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px; cursor: pointer;
+    font-size: 13px; color: var(--text-secondary);
+    transition: all 0.15s; user-select: none;
+  }
+  .checkbox-label:hover { background: rgba(255,255,255,0.09); color: white; }
+  .checkbox-label input[type="checkbox"] { accent-color: var(--red); width: 14px; height: 14px; cursor: pointer; }
+  .checkbox-label.checked { background: rgba(230,57,70,0.12); border-color: rgba(230,57,70,0.25); color: white; }
+  .result-group { display: flex; gap: 8px; margin-top: 6px; }
+  .result-btn {
+    flex: 1; padding: 9px 0; border-radius: 8px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.05); color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .result-btn:hover { background: rgba(255,255,255,0.09); color: white; }
+  .result-btn.selected-pass { background: rgba(46,204,113,0.18); border-color: rgba(46,204,113,0.4); color: var(--green); }
+  .result-btn.selected-minor { background: rgba(243,156,18,0.18); border-color: rgba(243,156,18,0.4); color: var(--amber); }
+  .result-btn.selected-fail { background: rgba(230,57,70,0.18); border-color: rgba(230,57,70,0.4); color: var(--red); }
+  .form-submit-row { margin-top: 20px; display: flex; gap: 10px; }
+  /* Submissions list */
+  .submissions-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+  .submission-card {
+    padding: 16px 20px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    animation: fade-up 0.3s ease;
+  }
+  .submission-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .submission-card-meta { font-size: 11px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; }
+  .submission-card-row { display: flex; gap: 8px; font-size: 13px; margin-bottom: 5px; }
+  .submission-card-label { color: var(--text-secondary); min-width: 110px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0; }
+  .submission-card-value { color: var(--text-primary); }
+  .submissions-loading { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 13px; }
+  .fb-config-notice {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 200px; flex-direction: column; gap: 12px;
+    color: var(--text-secondary); text-align: center; padding: 40px;
+  }
+  .fb-config-notice .notice-icon { font-size: 36px; }
+  .fb-config-notice .notice-title { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  .fb-config-notice .notice-text { font-size: 13px; max-width: 300px; line-height: 1.6; }
+  /* Admin Firebase tab */
+  .config-pre {
+    background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--gold); overflow-x: auto; margin: 10px 0 14px;
+    white-space: pre; line-height: 1.6;
+  }
+  .config-status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 10px 0 18px; padding: 12px 16px; background: rgba(255,255,255,0.04); border-radius: 10px; border: 1px solid var(--glass-border); }
 </style>
 </head>
 <body>
@@ -984,28 +1061,61 @@
           <button class="form-tab" onclick="switchFormTab(this,'calllog-history')">📂 View History</button>
         </div>
         <div id="calllog-submit">
-          <div class="form-embed-wrap" id="callogFormWrap">
-            <div class="form-placeholder" id="calllogPlaceholder">
-              <div class="form-placeholder-icon">📋</div>
-              <div class="form-placeholder-title">Connect Microsoft Form</div>
-              <div class="form-placeholder-text">Paste your Microsoft Forms share URL to embed your call run log form directly here.</div>
-              <input class="form-url-input" id="calllogUrl" placeholder="https://forms.office.com/…" value="">
-              <button class="form-url-btn" onclick="loadForm('calllog')">Load Form</button>
+          <div class="fb-config-notice" id="cl-config-notice" style="display:none;">
+            <div class="notice-icon">🔥</div>
+            <div class="notice-title">Firebase Not Configured</div>
+            <div class="notice-text">Go to Admin → Firebase tab for setup instructions.</div>
+          </div>
+          <div class="fb-form" id="cl-form-wrap">
+            <div class="form-grid-2">
+              <div class="field"><label>Date &amp; Time</label><input type="datetime-local" id="cl_datetime"></div>
+              <div class="field"><label>Incident Number</label><input type="text" id="cl_incident_num" placeholder="e.g. 2026-0217-001"></div>
+            </div>
+            <div class="field">
+              <label>Incident Type</label>
+              <select id="cl_type">
+                <option value="">Select type…</option>
+                <option>Structure Fire</option>
+                <option>Vehicle Accident</option>
+                <option>Medical</option>
+                <option>Brush Fire</option>
+                <option>HazMat</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field"><label>Address / Location</label><input type="text" id="cl_address" placeholder="123 Main St, Colton"></div>
+            <div class="field">
+              <label>Units Responding</label>
+              <div class="checkbox-group" id="cl_units_group">
+                <label class="checkbox-label"><input type="checkbox" value="Engine 411"> Engine 411</label>
+                <label class="checkbox-label"><input type="checkbox" value="Rescue 412"> Rescue 412</label>
+                <label class="checkbox-label"><input type="checkbox" value="Tanker 413"> Tanker 413</label>
+                <label class="checkbox-label"><input type="checkbox" value="Brush 414"> Brush 414</label>
+                <label class="checkbox-label"><input type="checkbox" value="Command 415"> Command 415</label>
+                <label class="checkbox-label"><input type="checkbox" value="Utility 416"> Utility 416</label>
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="field"><label>Personnel on Scene</label><input type="number" id="cl_personnel" min="1" max="99" placeholder="0"></div>
+              <div class="field">
+                <label>Mutual Aid</label>
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;">
+                  <span style="font-size:13px;color:var(--text-secondary);">Mutual aid requested/provided?</span>
+                  <label class="toggle"><input type="checkbox" id="cl_mutual_aid"><span class="toggle-slider"></span></label>
+                </div>
+              </div>
+            </div>
+            <div class="field"><label>Outcome / Notes</label><textarea id="cl_notes" placeholder="Describe the outcome, actions taken, any notable events…"></textarea></div>
+            <div class="field"><label>Submitted By</label><input type="text" id="cl_submitted_by" readonly style="opacity:0.6;cursor:not-allowed;"></div>
+            <div class="form-submit-row">
+              <button class="btn-sm primary" style="max-width:180px;" onclick="submitCallLog()">📋 Submit Log</button>
+              <button class="btn-sm" style="background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);color:var(--text-secondary);padding:10px 18px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="resetCallLogForm()">Clear</button>
             </div>
           </div>
         </div>
         <div id="calllog-history" style="display:none;">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Type</th><th>Location</th><th>Units</th><th>Submitted By</th></tr></thead>
-              <tbody>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/16/26 14:32</span></td><td><span class="badge red">Structure Fire</span></td><td>412 Oak Ave</td><td>E411, R412</td><td>Lt. Mitchell</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/14/26 09:15</span></td><td><span class="badge amber">MVA</span></td><td>Hwy 30 & Main</td><td>R412, T413</td><td>FF Torres</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/12/26 22:41</span></td><td><span class="badge blue">Medical</span></td><td>88 Elm St</td><td>R412</td><td>EMT Wolfe</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/10/26 07:08</span></td><td><span class="badge amber">Brush Fire</span></td><td>Old Mill Rd</td><td>E411, T413</td><td>Chief Harmon</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/08/26 18:55</span></td><td><span class="badge green">False Alarm</span></td><td>Colton High School</td><td>E411</td><td>FF Chen</td></tr>
-              </tbody>
-            </table>
+          <div class="submissions-list" id="calllog-submissions-list">
+            <div class="submissions-loading">Loading…</div>
           </div>
         </div>
       </div>
@@ -1029,26 +1139,54 @@
           <button class="form-tab" onclick="switchFormTab(this,'rescue-history')">📂 History</button>
         </div>
         <div id="rescue-submit">
-          <div class="form-embed-wrap">
-            <div class="form-placeholder">
-              <div class="form-placeholder-icon">🚑</div>
-              <div class="form-placeholder-title">Connect Rescue Check Form</div>
-              <div class="form-placeholder-text">Paste your Microsoft Forms URL for the Rescue Squad daily/weekly apparatus check.</div>
-              <input class="form-url-input" id="rescueUrl" placeholder="https://forms.office.com/…">
-              <button class="form-url-btn" onclick="loadForm('rescue')" style="background:linear-gradient(135deg,#F4A261,#E07B39);box-shadow:0 4px 14px rgba(244,162,97,0.35);">Load Form</button>
+          <div class="fb-config-notice" id="rs-config-notice" style="display:none;">
+            <div class="notice-icon">🚑</div>
+            <div class="notice-title">Firebase Not Configured</div>
+            <div class="notice-text">Go to Admin → Firebase tab for setup instructions.</div>
+          </div>
+          <div class="fb-form" id="rs-form-wrap">
+            <div class="form-grid-2">
+              <div class="field"><label>Check Date</label><input type="date" id="rs_date"></div>
+              <div class="field">
+                <label>Check Type</label>
+                <select id="rs_check_type">
+                  <option value="Daily">Daily</option>
+                  <option value="Weekly">Weekly</option>
+                </select>
+              </div>
+            </div>
+            <div class="field"><label>Unit</label><input type="text" id="rs_unit" value="Rescue 412" readonly style="opacity:0.6;cursor:not-allowed;"></div>
+            <div class="field"><label>O2 Level (%)</label><input type="number" id="rs_o2" min="0" max="100" placeholder="95"></div>
+            <div class="field">
+              <label>Equipment Check</label>
+              <div class="checkbox-group" id="rs_equip_group">
+                <label class="checkbox-label"><input type="checkbox" value="AED"> AED</label>
+                <label class="checkbox-label"><input type="checkbox" value="Backboard"> Backboard</label>
+                <label class="checkbox-label"><input type="checkbox" value="O2 Kit"> O2 Kit</label>
+                <label class="checkbox-label"><input type="checkbox" value="Suction"> Suction</label>
+                <label class="checkbox-label"><input type="checkbox" value="Splints"> Splints</label>
+                <label class="checkbox-label"><input type="checkbox" value="Trauma Bag"> Trauma Bag</label>
+              </div>
+            </div>
+            <div class="field"><label>Deficiencies / Notes</label><textarea id="rs_deficiencies" placeholder="List any deficiencies found, or leave blank if none…"></textarea></div>
+            <div class="field">
+              <label>Result</label>
+              <div class="result-group">
+                <button class="result-btn" id="rs_pass" onclick="selectResult('rs','Pass')">✓ Pass</button>
+                <button class="result-btn" id="rs_minor" onclick="selectResult('rs','Minor')">⚠ Minor</button>
+                <button class="result-btn" id="rs_fail" onclick="selectResult('rs','Fail')">✕ Fail</button>
+              </div>
+            </div>
+            <div class="field"><label>Submitted By</label><input type="text" id="rs_submitted_by" readonly style="opacity:0.6;cursor:not-allowed;"></div>
+            <div class="form-submit-row">
+              <button class="btn-sm primary" style="max-width:200px;background:linear-gradient(135deg,#F4A261,#E07B39);box-shadow:0 4px 14px rgba(244,162,97,0.35);" onclick="submitRescueCheck()">🚑 Submit Check</button>
+              <button class="btn-sm" style="background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);color:var(--text-secondary);padding:10px 18px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="resetRescueForm()">Clear</button>
             </div>
           </div>
         </div>
         <div id="rescue-history" style="display:none;">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Unit</th><th>Inspector</th><th>Result</th><th>Notes</th></tr></thead>
-              <tbody>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/17/26</span></td><td>Rescue 412</td><td>EMT Wolfe</td><td><span class="badge green">Pass</span></td><td>—</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/16/26</span></td><td>Rescue 412</td><td>FF Torres</td><td><span class="badge green">Pass</span></td><td>—</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/15/26</span></td><td>Rescue 412</td><td>EMT Wolfe</td><td><span class="badge amber">Minor</span></td><td>O2 tank at 85%</td></tr>
-              </tbody>
-            </table>
+          <div class="submissions-list" id="rescue-submissions-list">
+            <div class="submissions-loading">Loading…</div>
           </div>
         </div>
       </div>
@@ -1072,26 +1210,63 @@
           <button class="form-tab" onclick="switchFormTab(this,'truck-history')">📂 History</button>
         </div>
         <div id="truck-submit">
-          <div class="form-embed-wrap">
-            <div class="form-placeholder">
-              <div class="form-placeholder-icon">🚒</div>
-              <div class="form-placeholder-title">Connect Truck Check Form</div>
-              <div class="form-placeholder-text">Paste your Microsoft Forms URL for the fire apparatus daily check form.</div>
-              <input class="form-url-input" id="truckUrl" placeholder="https://forms.office.com/…">
-              <button class="form-url-btn" onclick="loadForm('truck')">Load Form</button>
+          <div class="fb-config-notice" id="tc-config-notice" style="display:none;">
+            <div class="notice-icon">🚒</div>
+            <div class="notice-title">Firebase Not Configured</div>
+            <div class="notice-text">Go to Admin → Firebase tab for setup instructions.</div>
+          </div>
+          <div class="fb-form" id="tc-form-wrap">
+            <div class="form-grid-2">
+              <div class="field"><label>Check Date</label><input type="date" id="tc_date"></div>
+              <div class="field">
+                <label>Check Type</label>
+                <select id="tc_check_type">
+                  <option value="Daily">Daily</option>
+                  <option value="Weekly">Weekly</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Unit</label>
+              <select id="tc_unit">
+                <option value="">Select unit…</option>
+                <option>Engine 411</option>
+                <option>Tanker 413</option>
+                <option>Brush 414</option>
+                <option>Command 415</option>
+                <option>Utility 416</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Checklist</label>
+              <div class="checkbox-group" id="tc_checklist_group">
+                <label class="checkbox-label"><input type="checkbox" value="Fluids OK"> Fluids OK</label>
+                <label class="checkbox-label"><input type="checkbox" value="Lights OK"> Lights OK</label>
+                <label class="checkbox-label"><input type="checkbox" value="Equipment OK"> Equipment OK</label>
+                <label class="checkbox-label"><input type="checkbox" value="Tires OK"> Tires OK</label>
+                <label class="checkbox-label"><input type="checkbox" value="SCBA OK"> SCBA OK</label>
+                <label class="checkbox-label"><input type="checkbox" value="Pump OK"> Pump OK</label>
+              </div>
+            </div>
+            <div class="field"><label>Deficiencies / Notes</label><textarea id="tc_deficiencies" placeholder="List any deficiencies found, or leave blank if none…"></textarea></div>
+            <div class="field">
+              <label>Result</label>
+              <div class="result-group">
+                <button class="result-btn" id="tc_pass" onclick="selectResult('tc','Pass')">✓ Pass</button>
+                <button class="result-btn" id="tc_minor" onclick="selectResult('tc','Minor')">⚠ Minor</button>
+                <button class="result-btn" id="tc_fail" onclick="selectResult('tc','Fail')">✕ Fail</button>
+              </div>
+            </div>
+            <div class="field"><label>Submitted By</label><input type="text" id="tc_submitted_by" readonly style="opacity:0.6;cursor:not-allowed;"></div>
+            <div class="form-submit-row">
+              <button class="btn-sm primary" style="max-width:200px;" onclick="submitTruckCheck()">🚒 Submit Check</button>
+              <button class="btn-sm" style="background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);color:var(--text-secondary);padding:10px 18px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="resetTruckForm()">Clear</button>
             </div>
           </div>
         </div>
         <div id="truck-history" style="display:none;">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Unit</th><th>Inspector</th><th>Result</th><th>Notes</th></tr></thead>
-              <tbody>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/16/26</span></td><td>Engine 411</td><td>FF Torres</td><td><span class="badge green">Pass</span></td><td>—</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/15/26</span></td><td>Tanker 413</td><td>Lt. Mitchell</td><td><span class="badge green">Pass</span></td><td>—</td></tr>
-                <tr><td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;">02/14/26</span></td><td>Engine 411</td><td>FF Chen</td><td><span class="badge red">Fail</span></td><td>Low fluid — corrected</td></tr>
-              </tbody>
-            </table>
+          <div class="submissions-list" id="truck-submissions-list">
+            <div class="submissions-loading">Loading…</div>
           </div>
         </div>
       </div>
@@ -1155,6 +1330,7 @@
           <button class="admin-tab" onclick="switchAdminTab('apparatus',this)">🚒 Apparatus</button>
           <button class="admin-tab" onclick="switchAdminTab('announce',this)">📢 Announce</button>
           <button class="admin-tab" onclick="switchAdminTab('links',this)">🔗 Links</button>
+          <button class="admin-tab" onclick="switchAdminTab('firebase',this)">🔥 Firebase</button>
         </div>
 
         <!-- Access Requests -->
@@ -1224,6 +1400,33 @@
             </table>
           </div>
           <button class="btn-sm primary" style="max-width:200px;" onclick="showToast('Link management coming soon','info')">+ Add Link</button>
+        </div>
+
+        <!-- Firebase Setup -->
+        <div class="admin-section" id="admin-firebase">
+          <div class="settings-section">
+            <div class="settings-title">Firebase Connection</div>
+            <div class="settings-sub">Status of your Firestore database connection.</div>
+            <div class="config-status-row" id="fb-config-status-row">
+              <div class="dot red"></div>
+              <span style="color:var(--red);font-weight:600;">Not Configured</span>
+              <span style="color:var(--text-secondary);margin-left:4px;">— checking…</span>
+            </div>
+            <div class="settings-title" style="margin-top:20px;">Setup Instructions</div>
+            <div class="settings-sub">Your Firebase config is already set. If you need to update it, open <code style="color:var(--gold);font-size:12px;">colton-fire.html</code> in a text editor and find the <code style="color:var(--gold);font-size:12px;">FIREBASE_CONFIG</code> block.</div>
+            <div style="margin-top:20px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-primary);">Firestore Security Rules</div>
+              <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:10px;">After testing, tighten your rules in Firebase Console → Firestore → Rules:</div>
+              <div class="config-pre">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true; // tighten after testing
+    }
+  }
+}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1504,6 +1707,11 @@ function navigate(pageId, navEl) {
   };
   document.getElementById('topbarTitle').textContent = titles[pageId] || pageId;
 
+  // Init forms on navigate
+  if (pageId === 'callogs') initCallLogForm();
+  if (pageId === 'rescue')  initRescueForm();
+  if (pageId === 'trucks')  initTruckForm();
+
   closeSidebar();
 }
 
@@ -1516,6 +1724,7 @@ function setBnActive(el) {
 function switchAdminTab(tab, btn) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
+  if (tab === 'firebase') renderFirebaseStatus();
   if (btn) {
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
@@ -1582,6 +1791,11 @@ function switchFormTab(btn, sectionId) {
   });
   const target = document.getElementById(sectionId);
   if (target) target.style.display = 'block';
+
+  // Load history from Firestore when switching to history tabs
+  if (sectionId === 'calllog-history') loadCallLogHistory();
+  if (sectionId === 'rescue-history')  loadRescueHistory();
+  if (sectionId === 'truck-history')   loadTruckHistory();
 }
 
 // ── LOAD MS FORMS ─────────────────────────────────────────────────
@@ -1703,6 +1917,326 @@ function createEmbers() {
 createEmbers();
 
 // Keyboard PIN input
+// ── FIREBASE CONFIG & INIT ────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDGPuxUvGIHO8aKnP3CxyIJVEzuDdAjJ4Q",
+  authDomain:        "coltonfireapp.firebaseapp.com",
+  projectId:         "coltonfireapp",
+  storageBucket:     "coltonfireapp.firebasestorage.app",
+  messagingSenderId: "811650478121",
+  appId:             "1:811650478121:web:46f15087c601019946ec38"
+};
+
+let db = null;
+let firebaseReady = false;
+
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    firebaseReady = true;
+    console.log('[CVFD] Firebase connected');
+  } catch(e) {
+    console.error('[CVFD] Firebase init failed:', e);
+  }
+}
+initFirebase();
+
+function renderFirebaseStatus() {
+  const row = document.getElementById('fb-config-status-row');
+  if (!row) return;
+  if (firebaseReady) {
+    row.innerHTML = '<div class="dot green"></div><span style="color:var(--green);font-weight:600;">Connected</span><span style="color:var(--text-secondary);margin-left:6px;">— Firestore is active</span>';
+  } else {
+    row.innerHTML = '<div class="dot red"></div><span style="color:var(--red);font-weight:600;">Not Connected</span><span style="color:var(--text-secondary);margin-left:6px;">— Check browser console for errors</span>';
+  }
+}
+
+// ── SHARED FORM HELPERS ───────────────────────────────────────────
+function todayDate() {
+  return new Date().toISOString().split('T')[0];
+}
+function nowDatetime() {
+  const now = new Date();
+  return new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+}
+function getCheckedValues(groupId) {
+  const vals = [];
+  document.querySelectorAll('#' + groupId + ' input[type="checkbox"]:checked').forEach(cb => vals.push(cb.value));
+  return vals;
+}
+function initCheckboxGroup(groupId) {
+  document.querySelectorAll('#' + groupId + ' .checkbox-label input').forEach(cb => {
+    cb.addEventListener('change', () => cb.closest('.checkbox-label').classList.toggle('checked', cb.checked));
+  });
+}
+function resetCheckboxGroup(groupId) {
+  document.querySelectorAll('#' + groupId + ' input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.checkbox-label').classList.remove('checked');
+  });
+}
+let resultSelections = {};
+function selectResult(prefix, value) {
+  resultSelections[prefix] = value;
+  ['pass','minor','fail'].forEach(r => {
+    const btn = document.getElementById(prefix + '_' + r);
+    if (!btn) return;
+    btn.className = 'result-btn';
+    if (r === value.toLowerCase()) btn.classList.add('selected-' + r);
+  });
+}
+function resetResultBtns(prefix) {
+  resultSelections[prefix] = null;
+  ['pass','minor','fail'].forEach(r => {
+    const btn = document.getElementById(prefix + '_' + r);
+    if (btn) btn.className = 'result-btn';
+  });
+}
+function updateFormState(noticeId, wrapId) {
+  const notice = document.getElementById(noticeId);
+  const wrap = document.getElementById(wrapId);
+  if (!firebaseReady) {
+    if (notice) notice.style.display = 'flex';
+    if (wrap) wrap.style.display = 'none';
+  } else {
+    if (notice) notice.style.display = 'none';
+    if (wrap) wrap.style.display = 'block';
+  }
+}
+
+// ── CALL LOG FORM ─────────────────────────────────────────────────
+function initCallLogForm() {
+  const dt = document.getElementById('cl_datetime');
+  if (dt && !dt.value) dt.value = nowDatetime();
+  const sub = document.getElementById('cl_submitted_by');
+  if (sub && currentUser) sub.value = currentUser.name;
+  initCheckboxGroup('cl_units_group');
+  updateFormState('cl-config-notice','cl-form-wrap');
+}
+
+function submitCallLog() {
+  if (!firebaseReady) { showToast('Firebase not connected. See Admin → Firebase tab.','error'); return; }
+  const dt = document.getElementById('cl_datetime').value;
+  const type = document.getElementById('cl_type').value;
+  const addr = document.getElementById('cl_address').value.trim();
+  if (!dt || !type || !addr) { showToast('Date/Time, Incident Type, and Address are required','error'); return; }
+  const units = getCheckedValues('cl_units_group');
+  const uid = currentUser ? Object.keys(MEMBERS).find(k => MEMBERS[k] === currentUser) || 'unknown' : 'unknown';
+  const btn = document.querySelector('#cl-form-wrap .btn-sm.primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  db.collection('callLogs').add({
+    incidentNumber:   document.getElementById('cl_incident_num').value.trim() || 'N/A',
+    incidentType:     type,
+    address:          addr,
+    dateTime:         firebase.firestore.Timestamp.fromDate(new Date(dt)),
+    unitsResponding:  units,
+    personnelOnScene: parseInt(document.getElementById('cl_personnel').value) || 0,
+    mutualAid:        document.getElementById('cl_mutual_aid').checked,
+    notes:            document.getElementById('cl_notes').value.trim(),
+    submittedBy:      currentUser ? currentUser.name : 'Unknown',
+    submittedByUid:   uid,
+    createdAt:        firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    showToast('Call log submitted!','success');
+    resetCallLogForm();
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Submit Log'; }
+  }).catch(err => {
+    console.error(err);
+    showToast('Failed to save. Check console.','error');
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Submit Log'; }
+  });
+}
+
+function resetCallLogForm() {
+  ['cl_incident_num','cl_address','cl_personnel','cl_notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('cl_type').value = '';
+  document.getElementById('cl_mutual_aid').checked = false;
+  resetCheckboxGroup('cl_units_group');
+  document.getElementById('cl_datetime').value = nowDatetime();
+}
+
+function loadCallLogHistory() {
+  const list = document.getElementById('calllog-submissions-list');
+  if (!list) return;
+  if (!firebaseReady) { list.innerHTML = '<div class="submissions-loading">Firebase not connected.</div>'; return; }
+  list.innerHTML = '<div class="submissions-loading">Loading…</div>';
+  db.collection('callLogs').orderBy('createdAt','desc').limit(50).get().then(snap => {
+    if (snap.empty) { list.innerHTML = '<div class="submissions-loading">No submissions yet.</div>'; return; }
+    const colorMap = {'Structure Fire':'red','Vehicle Accident':'amber','Medical':'blue','Brush Fire':'amber','HazMat':'gold','Other':'green'};
+    list.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const dtStr = d.dateTime ? d.dateTime.toDate().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+      const clr = colorMap[d.incidentType] || 'blue';
+      return `<div class="submission-card">
+        <div class="submission-card-header">
+          <span class="badge ${clr}">${d.incidentType||'Unknown'}</span>
+          <span class="submission-card-meta">${dtStr}</span>
+          ${d.incidentNumber&&d.incidentNumber!=='N/A'?`<span class="submission-card-meta" style="margin-left:auto;">#${d.incidentNumber}</span>`:''}
+        </div>
+        <div class="submission-card-row"><span class="submission-card-label">Location</span><span class="submission-card-value">${d.address||'—'}</span></div>
+        <div class="submission-card-row"><span class="submission-card-label">Units</span><span class="submission-card-value">${d.unitsResponding?.join(', ')||'—'}</span></div>
+        <div class="submission-card-row"><span class="submission-card-label">Personnel</span><span class="submission-card-value">${d.personnelOnScene??'—'}</span></div>
+        <div class="submission-card-row"><span class="submission-card-label">Mutual Aid</span><span class="submission-card-value" style="color:${d.mutualAid?'var(--amber)':'inherit'}">${d.mutualAid?'Yes':'No'}</span></div>
+        ${d.notes?`<div class="submission-card-row" style="flex-direction:column;gap:3px;"><span class="submission-card-label">Notes</span><span class="submission-card-value" style="line-height:1.5;opacity:0.85;">${d.notes}</span></div>`:''}
+        <div class="submission-card-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--glass-border);"><span class="submission-card-label">Submitted by</span><span class="submission-card-value" style="color:var(--text-secondary);">${d.submittedBy||'—'}</span></div>
+      </div>`;
+    }).join('');
+  }).catch(err => { console.error(err); list.innerHTML = '<div class="submissions-loading">Failed to load.</div>'; });
+}
+
+// ── RESCUE CHECK FORM ─────────────────────────────────────────────
+function initRescueForm() {
+  const dt = document.getElementById('rs_date');
+  if (dt && !dt.value) dt.value = todayDate();
+  const sub = document.getElementById('rs_submitted_by');
+  if (sub && currentUser) sub.value = currentUser.name;
+  initCheckboxGroup('rs_equip_group');
+  updateFormState('rs-config-notice','rs-form-wrap');
+}
+
+function submitRescueCheck() {
+  if (!firebaseReady) { showToast('Firebase not connected.','error'); return; }
+  const checkDate = document.getElementById('rs_date').value;
+  if (!checkDate) { showToast('Check date is required','error'); return; }
+  const result = resultSelections['rs'];
+  if (!result) { showToast('Please select a result (Pass/Minor/Fail)','error'); return; }
+  const uid = currentUser ? Object.keys(MEMBERS).find(k => MEMBERS[k] === currentUser) || 'unknown' : 'unknown';
+  const btn = document.querySelector('#rs-form-wrap .btn-sm.primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  db.collection('rescueChecks').add({
+    unit:           'Rescue 412',
+    checkDate:      firebase.firestore.Timestamp.fromDate(new Date(checkDate)),
+    checkType:      document.getElementById('rs_check_type').value,
+    oxygenLevel:    parseInt(document.getElementById('rs_o2').value) || null,
+    equipmentChecked: getCheckedValues('rs_equip_group'),
+    deficiencies:   document.getElementById('rs_deficiencies').value.trim(),
+    result:         result,
+    submittedBy:    currentUser ? currentUser.name : 'Unknown',
+    submittedByUid: uid,
+    createdAt:      firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    showToast('Rescue check submitted!','success');
+    resetRescueForm();
+    if (btn) { btn.disabled = false; btn.textContent = '🚑 Submit Check'; }
+  }).catch(err => {
+    console.error(err);
+    showToast('Failed to save.','error');
+    if (btn) { btn.disabled = false; btn.textContent = '🚑 Submit Check'; }
+  });
+}
+
+function resetRescueForm() {
+  document.getElementById('rs_date').value = todayDate();
+  document.getElementById('rs_o2').value = '';
+  document.getElementById('rs_deficiencies').value = '';
+  resetCheckboxGroup('rs_equip_group');
+  resetResultBtns('rs');
+}
+
+function loadRescueHistory() {
+  const list = document.getElementById('rescue-submissions-list');
+  if (!list) return;
+  if (!firebaseReady) { list.innerHTML = '<div class="submissions-loading">Firebase not connected.</div>'; return; }
+  list.innerHTML = '<div class="submissions-loading">Loading…</div>';
+  db.collection('rescueChecks').orderBy('createdAt','desc').limit(50).get().then(snap => {
+    if (snap.empty) { list.innerHTML = '<div class="submissions-loading">No submissions yet.</div>'; return; }
+    const resColor = {'Pass':'green','Minor':'amber','Fail':'red'};
+    list.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const dtStr = d.checkDate ? d.checkDate.toDate().toLocaleDateString('en-US') : '—';
+      const clr = resColor[d.result] || 'blue';
+      return `<div class="submission-card">
+        <div class="submission-card-header">
+          <span class="badge ${clr}">${d.result||'—'}</span>
+          <span class="submission-card-meta">${dtStr} · ${d.checkType||''}</span>
+          <span class="submission-card-meta" style="margin-left:auto;">${d.unit||''}</span>
+        </div>
+        ${d.oxygenLevel!=null?`<div class="submission-card-row"><span class="submission-card-label">O2 Level</span><span class="submission-card-value">${d.oxygenLevel}%</span></div>`:''}
+        ${d.equipmentChecked?.length?`<div class="submission-card-row"><span class="submission-card-label">Equipment</span><span class="submission-card-value">${d.equipmentChecked.join(', ')}</span></div>`:''}
+        ${d.deficiencies?`<div class="submission-card-row" style="flex-direction:column;gap:3px;"><span class="submission-card-label">Deficiencies</span><span class="submission-card-value" style="color:var(--amber);line-height:1.5;">${d.deficiencies}</span></div>`:''}
+        <div class="submission-card-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--glass-border);"><span class="submission-card-label">Submitted by</span><span class="submission-card-value" style="color:var(--text-secondary);">${d.submittedBy||'—'}</span></div>
+      </div>`;
+    }).join('');
+  }).catch(err => { console.error(err); list.innerHTML = '<div class="submissions-loading">Failed to load.</div>'; });
+}
+
+// ── TRUCK CHECK FORM ──────────────────────────────────────────────
+function initTruckForm() {
+  const dt = document.getElementById('tc_date');
+  if (dt && !dt.value) dt.value = todayDate();
+  const sub = document.getElementById('tc_submitted_by');
+  if (sub && currentUser) sub.value = currentUser.name;
+  initCheckboxGroup('tc_checklist_group');
+  updateFormState('tc-config-notice','tc-form-wrap');
+}
+
+function submitTruckCheck() {
+  if (!firebaseReady) { showToast('Firebase not connected.','error'); return; }
+  const checkDate = document.getElementById('tc_date').value;
+  const unit = document.getElementById('tc_unit').value;
+  if (!checkDate || !unit) { showToast('Date and Unit are required','error'); return; }
+  const result = resultSelections['tc'];
+  if (!result) { showToast('Please select a result (Pass/Minor/Fail)','error'); return; }
+  const uid = currentUser ? Object.keys(MEMBERS).find(k => MEMBERS[k] === currentUser) || 'unknown' : 'unknown';
+  const btn = document.querySelector('#tc-form-wrap .btn-sm.primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  db.collection('truckChecks').add({
+    unit:           unit,
+    checkDate:      firebase.firestore.Timestamp.fromDate(new Date(checkDate)),
+    checkType:      document.getElementById('tc_check_type').value,
+    checklistItems: getCheckedValues('tc_checklist_group'),
+    deficiencies:   document.getElementById('tc_deficiencies').value.trim(),
+    result:         result,
+    submittedBy:    currentUser ? currentUser.name : 'Unknown',
+    submittedByUid: uid,
+    createdAt:      firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    showToast('Truck check submitted!','success');
+    resetTruckForm();
+    if (btn) { btn.disabled = false; btn.textContent = '🚒 Submit Check'; }
+  }).catch(err => {
+    console.error(err);
+    showToast('Failed to save.','error');
+    if (btn) { btn.disabled = false; btn.textContent = '🚒 Submit Check'; }
+  });
+}
+
+function resetTruckForm() {
+  document.getElementById('tc_date').value = todayDate();
+  document.getElementById('tc_unit').value = '';
+  document.getElementById('tc_deficiencies').value = '';
+  resetCheckboxGroup('tc_checklist_group');
+  resetResultBtns('tc');
+}
+
+function loadTruckHistory() {
+  const list = document.getElementById('truck-submissions-list');
+  if (!list) return;
+  if (!firebaseReady) { list.innerHTML = '<div class="submissions-loading">Firebase not connected.</div>'; return; }
+  list.innerHTML = '<div class="submissions-loading">Loading…</div>';
+  db.collection('truckChecks').orderBy('createdAt','desc').limit(50).get().then(snap => {
+    if (snap.empty) { list.innerHTML = '<div class="submissions-loading">No submissions yet.</div>'; return; }
+    const resColor = {'Pass':'green','Minor':'amber','Fail':'red'};
+    list.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const dtStr = d.checkDate ? d.checkDate.toDate().toLocaleDateString('en-US') : '—';
+      const clr = resColor[d.result] || 'blue';
+      return `<div class="submission-card">
+        <div class="submission-card-header">
+          <span class="badge ${clr}">${d.result||'—'}</span>
+          <span class="submission-card-meta">${dtStr} · ${d.checkType||''}</span>
+          <span class="submission-card-meta" style="margin-left:auto;">${d.unit||''}</span>
+        </div>
+        ${d.checklistItems?.length?`<div class="submission-card-row"><span class="submission-card-label">Checklist</span><span class="submission-card-value">${d.checklistItems.join(', ')}</span></div>`:''}
+        ${d.deficiencies?`<div class="submission-card-row" style="flex-direction:column;gap:3px;"><span class="submission-card-label">Deficiencies</span><span class="submission-card-value" style="color:var(--amber);line-height:1.5;">${d.deficiencies}</span></div>`:''}
+        <div class="submission-card-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--glass-border);"><span class="submission-card-label">Submitted by</span><span class="submission-card-value" style="color:var(--text-secondary);">${d.submittedBy||'—'}</span></div>
+      </div>`;
+    }).join('');
+  }).catch(err => { console.error(err); list.innerHTML = '<div class="submissions-loading">Failed to load.</div>'; });
+}
+
+// ── KEYBOARD PIN INPUT ────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (document.getElementById('auth-screen').style.display === 'none') return;
   if (e.key >= '0' && e.key <= '9' && document.getElementById('pin-section').classList.contains('visible')) {
